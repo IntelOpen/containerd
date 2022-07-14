@@ -277,6 +277,19 @@ func (c *criService) containerSpec(
 		}
 	}
 
+	// Get blockio limit
+	blockIOLimit, err := c.blockIOLimitFromAnnotations(config.GetMetadata().GetName(), config.Annotations, sandboxConfig.Annotations)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set blockio limit: %w", err)
+	}
+	if blockIOLimit != "" {
+		if linuxBlockIO, err := blockIOLimitToLinuxOci(blockIOLimit); err == nil {
+			specOpts = append(specOpts, oci.WithBlockIO(linuxBlockIO))
+		} else {
+			return nil, err
+		}
+	}
+
 	// Get RDT class
 	rdtClass, err := c.rdtClassFromAnnotations(config.GetMetadata().GetName(), config.Annotations, sandboxConfig.Annotations)
 	if err != nil {
