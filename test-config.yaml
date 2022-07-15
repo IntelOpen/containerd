@@ -1,0 +1,7 @@
+metadata:
+  name: test4
+image: 
+  image: busybox  
+command: ["top"]
+annotations:
+  intel.com/networkio.limits: "{\"ClassID\":101}"
