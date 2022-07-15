@@ -17,6 +17,7 @@ limitations under the License.
 package blockio
 
 import (
+	"encoding/json"
 	"fmt"
 
 	oci "github.com/opencontainers/runtime-spec/specs-go"
@@ -41,6 +42,36 @@ func OciLinuxBlockIO(class string) (*oci.LinuxBlockIO, error) {
 	ociBlockio.ThrottleReadIOPSDevice = ociLinuxThrottleDevices(blockio.ThrottleReadIOPSDevice)
 	ociBlockio.ThrottleWriteIOPSDevice = ociLinuxThrottleDevices(blockio.ThrottleWriteIOPSDevice)
 	return &ociBlockio, nil
+}
+
+type networkIOLimitInfo struct {
+	ClassID    uint32                       `json:"ClassID,omitempty"`
+	Priorities []oci.LinuxInterfacePriority `json:"Priorities,omitempty"`
+}
+
+// OciLinuxNetworkIO returns OCI LinuxNetworkIO structure corresponding to the class.
+func OciLinuxNetworkIO(class string) (*oci.LinuxNetwork, error) {
+	networkio := networkIOLimitInfo{}
+	err := json.Unmarshal([]byte(class), &networkio)
+	if err != nil {
+		return nil, err
+	}
+	ociNetworkio := oci.LinuxNetwork{}
+	ociNetworkio.ClassID = &networkio.ClassID
+	ociNetworkio.Priorities = ociLinuxPriorities(networkio.Priorities)
+	return &ociNetworkio, nil
+}
+
+func ociLinuxPriorities(np []oci.LinuxInterfacePriority) []oci.LinuxInterfacePriority {
+	if np == nil {
+		return nil
+	}
+	olip := make([]oci.LinuxInterfacePriority, len(np))
+	for i, ip := range np {
+		olip[i].Name = ip.Name
+		olip[i].Priority = ip.Priority
+	}
+	return olip
 }
 
 func ociLinuxWeightDevices(dws cgroups.DeviceWeights) []oci.LinuxWeightDevice {

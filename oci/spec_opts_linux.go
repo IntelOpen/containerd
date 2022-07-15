@@ -96,6 +96,15 @@ func WithBlockIO(blockio *specs.LinuxBlockIO) SpecOpts {
 	}
 }
 
+// WithBlockIO sets the container's networkio parameters
+func WithNetworkIO(networkio *specs.LinuxNetwork) SpecOpts {
+	return func(ctx context.Context, _ Client, c *containers.Container, s *Spec) error {
+		setResources(s)
+		s.Linux.Resources.Network = networkio
+		return nil
+	}
+}
+
 // WithCPUShares sets the container's cpu shares
 func WithCPUShares(shares uint64) SpecOpts {
 	return func(ctx context.Context, _ Client, c *containers.Container, s *Spec) error {

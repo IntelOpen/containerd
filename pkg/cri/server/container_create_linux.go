@@ -290,6 +290,21 @@ func (c *criService) containerSpec(
 		}
 	}
 
+	// Get networkio class
+	networkIOClass, err := c.networkIOClassFromAnnotations(config.GetMetadata().GetName(), config.Annotations, sandboxConfig.Annotations)
+	// fmt.Printf("***networkIOClass: %s***\n", networkIOClass)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set networkio class: %w", err)
+	}
+	if networkIOClass != "" {
+		if linuxNetworkIO, err := networkIOToLinuxOci(networkIOClass); err == nil {
+			// fmt.Printf("***linuxNetworkIO: %d***\n", *linuxNetworkIO.ClassID)
+			specOpts = append(specOpts, oci.WithNetworkIO(linuxNetworkIO))
+		} else {
+			return nil, err
+		}
+	}
+
 	// Get RDT class
 	rdtClass, err := c.rdtClassFromAnnotations(config.GetMetadata().GetName(), config.Annotations, sandboxConfig.Annotations)
 	if err != nil {
