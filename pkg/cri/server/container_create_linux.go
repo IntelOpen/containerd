@@ -372,7 +372,8 @@ func (c *criService) containerSpec(
 			classattrs2 := netlink.ClassAttrs{
 				LinkIndex: l.Attrs().Index,
 				Parent:    netlink.MakeHandle(1, 0),
-				Handle:    netlink.MakeHandle(1, 5),
+				//Handle:    netlink.MakeHandle(1, 5),
+				Handle: *linuxNetworkIO.ClassID,
 			}
 			htbclassattrs2 := netlink.HtbClassAttrs{
 				Rate:    i.bw,
@@ -394,7 +395,7 @@ func (c *criService) containerSpec(
 			}
 
 			fwattrs := netlink.FilterFwAttrs{
-				ClassId: netlink.MakeHandle(1, 5),
+				ClassId: *linuxNetworkIO.ClassID,
 			}
 
 			filter, err := netlink.NewFw(filterattrs, fwattrs)

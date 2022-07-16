@@ -4,4 +4,4 @@ image:
   image: busybox  
 command: ["top"]
 annotations:
-  intel.com/networkio.limits: "{\"ClassID\":101}"
+  intel.com/networkio.limits: "{\"ClassID\":65542}"
