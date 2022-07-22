@@ -43,7 +43,7 @@ const (
 // blockIOClassFromAnnotations examines container and pod annotations of a
 // container and returns its effective blockio class.
 func (c *criService) networkIOClassFromAnnotations(containerName string, containerAnnotations, podAnnotations map[string]string) (string, error) {
-	limit := containerAnnotations[ContainerNetworkIOLimit]
+	limit := podAnnotations[ContainerNetworkIOLimit]
 	return limit, nil
 }
 

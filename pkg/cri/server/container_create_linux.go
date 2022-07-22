@@ -300,7 +300,7 @@ func (c *criService) containerSpec(
 
 	// Get networkio class
 	networkIOClass, err := c.networkIOClassFromAnnotations(config.GetMetadata().GetName(), config.Annotations, sandboxConfig.Annotations)
-	// fmt.Printf("***networkIOClass: %s***\n", networkIOClass)
+	fmt.Printf("***networkIOClass: %s***\n", networkIOClass)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set networkio class: %w", err)
 	}
@@ -389,16 +389,16 @@ func (c *criService) containerSpec(
 			filterattrs := netlink.FilterAttrs{
 				LinkIndex: l.Attrs().Index,
 				Parent:    netlink.MakeHandle(1, 0),
-				Handle:    netlink.MakeHandle(0, 1024),
+				Handle:    netlink.MakeHandle(1, 5),
 				Priority:  49152,
-				Protocol:  unix.ETH_P_ALL,
+				Protocol:  unix.ETH_P_IP,
 			}
 
-			fwattrs := netlink.FilterFwAttrs{
-				ClassId: *linuxNetworkIO.ClassID,
+			filter := &netlink.GenericFilter{
+				filterattrs,
+				"cgroup",
 			}
 
-			filter, err := netlink.NewFw(filterattrs, fwattrs)
 			if err != nil {
 				fmt.Println("failed to create NewFw(). Reason:%s", err)
 			}
