@@ -648,18 +648,18 @@ func (c *criService) setupPodNetwork(ctx context.Context, sandbox *sandboxstore.
 	if err != nil {
 		return err
 	}
-	// fmt.Println("*****CHENYANG IN setupPodNetwork*****")
+	fmt.Println("*****CHENYANG IN setupPodNetwork*****")
 	// var net = "net1"
-	// // bandWidth, err := toCNIBandWidth(config.Annotations)
-	// // if err != nil {
-	// // 	return err
-	// // }
-	// fmt.Println("*****CHENYANG get bandWidth*****")
-	// netns, err := ns.GetNS(sandbox.NetNSPath)
+	// bandWidth, err := toCNIBandWidth(config.Annotations)
 	// if err != nil {
-	// 	return fmt.Errorf("failed to open netns %q: %v", netns, err)
+	// 	return err
 	// }
-	// fmt.Println("*****CHENYANG get ns*****")
+	// fmt.Println("*****CHENYANG get bandWidth*****")
+	netns, err := ns.GetNS(sandbox.NetNSPath)
+	if err != nil {
+		fmt.Printf("failed to open netns %q: %v", netns, err)
+	}
+	fmt.Println("*****CHENYANG get ns*****")
 	// createwithtc(netns, 40000000, 40000000, net)
 	logDebugCNIResult(ctx, id, result)
 	// Check if the default interface has IP config
