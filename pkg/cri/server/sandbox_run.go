@@ -649,12 +649,12 @@ func (c *criService) setupPodNetwork(ctx context.Context, sandbox *sandboxstore.
 		return err
 	}
 	fmt.Println("*****CHENYANG IN setupPodNetwork*****")
-	// var net = "net1"
-	// bandWidth, err := toCNIBandWidth(config.Annotations)
-	// if err != nil {
-	// 	return err
-	// }
-	// fmt.Println("*****CHENYANG get bandWidth*****")
+	var net = "net1"
+	bandWidth, err := toCNIBandWidth(config.Annotations)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("-------CHENYANG get bandWidth-------%s %d %d", net, bandWidth.EgressBurst, bandWidth.EgressRate)
 	netns, err := ns.GetNS(sandbox.NetNSPath)
 	if err != nil {
 		fmt.Printf("failed to open netns %q: %v", netns, err)
