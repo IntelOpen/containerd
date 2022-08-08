@@ -575,7 +575,10 @@ func createwithtc(ns ns.NetNS, egress, egressBurst uint64, name string) error {
 		Rate:    egress,
 		Cbuffer: 0,
 	}
+	fmt.Println("----kang before NewHtbClass------------------")
+
 	class1 := netlink.NewHtbClass(classattrs1, htbclassattrs1)
+	fmt.Println("----kang before ClassAdd------------------")
 	if err := netlink.ClassAdd(class1); err != nil {
 		fmt.Println("Class add error: ", err)
 	}
@@ -594,7 +597,7 @@ func createwithtc(ns ns.NetNS, egress, egressBurst uint64, name string) error {
 		filterattrs,
 		"cgroup",
 	}
-
+	fmt.Println("----kang before FilterAdd------------------")
 	if err := netlink.FilterAdd(filter); err != nil {
 		fmt.Println("failed to add filter. Reason:%s", err)
 	}
@@ -660,7 +663,7 @@ func (c *criService) setupPodNetwork(ctx context.Context, sandbox *sandboxstore.
 		fmt.Printf("failed to open netns %q: %v", netns, err)
 	}
 	fmt.Println("*****CHENYANG get ns*****")
-	// createwithtc(netns, 40000000, 40000000, net)
+	createwithtc(netns, 40000000, 40000000, net)
 	logDebugCNIResult(ctx, id, result)
 	// Check if the default interface has IP config
 	if configs, ok := result.Interfaces[defaultIfName]; ok && len(configs.IPConfigs) > 0 {
