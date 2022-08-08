@@ -18,6 +18,7 @@ package cni
 
 import (
 	"context"
+	"fmt"
 
 	cnilibrary "github.com/containernetworking/cni/libcni"
 	types100 "github.com/containernetworking/cni/pkg/types/100"
@@ -30,6 +31,7 @@ type Network struct {
 }
 
 func (n *Network) Attach(ctx context.Context, ns *Namespace) (*types100.Result, error) {
+	fmt.Println("*****CHENYANG in Attach: interfacename %s*****", n.ifName)
 	r, err := n.cni.AddNetworkList(ctx, n.config, ns.config(n.ifName))
 	if err != nil {
 		return nil, err
