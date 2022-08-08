@@ -522,7 +522,7 @@ func CreateIfb(ifbDeviceName string, mtu int) error {
 	return nil
 }
 
-func createwithtc(netns ns.NetNS, egress, egressBurst uint64, name string) error {
+func createwithtc(netns ns.NetNS, egress, egressBurst uint64, eth0 string) error {
 	fmt.Println("--------------kang createwithtc-------------")
 	_ = netns.Do(func(_ ns.NetNS) error {
 		// egress
