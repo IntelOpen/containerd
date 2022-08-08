@@ -546,7 +546,7 @@ func createwithtc(ns ns.NetNS, egress, egressBurst uint64, name string) error {
 			break
 		}
 	}
-
+	fmt.Println("----kang before NewHtb------------------")
 	if !hasHtb {
 		// qdisc
 		// tc qdisc add dev lo root handle 1:0 htb default 1
@@ -571,6 +571,7 @@ func createwithtc(ns ns.NetNS, egress, egressBurst uint64, name string) error {
 		Parent:    netlink.MakeHandle(1, 0),
 		Handle:    netlink.MakeHandle(1, 1),
 	}
+	fmt.Println("----kang before HtbClassAttrs------------------")
 	htbclassattrs1 := netlink.HtbClassAttrs{
 		Rate:    egress,
 		Cbuffer: 0,
