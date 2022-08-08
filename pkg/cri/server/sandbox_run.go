@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/sys/unix"
 	"math"
 	"net"
 	"path/filepath"
@@ -521,109 +522,121 @@ func CreateIfb(ifbDeviceName string, mtu int) error {
 	return nil
 }
 
-func createwithtc(ns ns.NetNS, egress, egressBurst uint64, name string) error {
-	fmt.Println("*****CHENYANG in createwithtc*****")
-	defer ns.Close()
-	l, err := netlink.LinkByName(name)
-	if err != nil {
-		fmt.Printf("get link by name %s in the container namespace %s\n", name, err)
-	}
-	fmt.Printf("-------------kang ---------- %s\n", l.Attrs().Index)
+func createwithtc(netns ns.NetNS, egress, egressBurst uint64, name string) error {
+	_ = netns.Do(func(_ ns.NetNS) error {
+		// egress
+		l, err := netlink.LinkByName(eth0)
+		if err != nil {
+			fmt.Printf("get link by name %s in the container namespace %s\n", eth0, err)
+		}
 
-	//qdiscs, err := safeQdiscList(l)
-	//if err != nil {
-	//	fmt.Printf("get current qdisc in the container namespace of %s\n", err)
-	//}
-	//var htb *netlink.Htb
-	//var hasHtb = false
-	//for _, qdisc := range qdiscs {
-	//	fmt.Printf("current qdisc is %s\n", qdisc)
-	//
-	//	h, isHTB := qdisc.(*netlink.Htb)
-	//	if isHTB {
-	//		htb = h
-	//		hasHtb = true
-	//		break
-	//	}
-	//}
-	//fmt.Println("----kang before NewHtb------------------")
-	//if !hasHtb {
-	//	// qdisc
-	//	// tc qdisc add dev lo root handle 1:0 htb default 1
-	//	attrs := netlink.QdiscAttrs{
-	//		LinkIndex: l.Attrs().Index,
-	//		Handle:    netlink.MakeHandle(1, 0),
-	//		Parent:    netlink.HANDLE_ROOT,
-	//	}
-	//	htb = netlink.NewHtb(attrs)
-	//	err = netlink.QdiscAdd(htb)
-	//	if err != nil {
-	//		fmt.Println("QdiscAdd error: %s\n", err)
-	//	}
-	//}
-	//
-	//fmt.Println("*****CHENYANG in hasHtb*****")
-	//// htb parent class
-	//// tc class add dev lo parent 1:0 classid 1:1 htb rate 125Mbps ceil 125Mbps prio 0
-	//// preconfig
-	//classattrs1 := netlink.ClassAttrs{
-	//	LinkIndex: l.Attrs().Index,
-	//	Parent:    netlink.MakeHandle(1, 0),
-	//	Handle:    netlink.MakeHandle(1, 1),
-	//}
-	//fmt.Println("----kang before HtbClassAttrs------------------")
-	//htbclassattrs1 := netlink.HtbClassAttrs{
-	//	Rate:    egress,
-	//	Cbuffer: 0,
-	//}
-	//fmt.Println("----kang before NewHtbClass------------------")
-	//
-	//class1 := netlink.NewHtbClass(classattrs1, htbclassattrs1)
-	//fmt.Println("----kang before ClassAdd------------------")
-	//if err := netlink.ClassAdd(class1); err != nil {
-	//	fmt.Println("Class add error: ", err)
-	//}
-	//
-	//// filter add
-	//// tc filter add dev lo parent 1:0 prio 0 protocol all handle 5 fw flowid 1:5
-	//filterattrs := netlink.FilterAttrs{
-	//	LinkIndex: l.Attrs().Index,
-	//	Parent:    netlink.MakeHandle(1, 0),
-	//	Handle:    netlink.MakeHandle(1, 1),
-	//	Priority:  49152,
-	//	Protocol:  unix.ETH_P_IP,
-	//}
-	//
-	//filter := &netlink.GenericFilter{
-	//	filterattrs,
-	//	"cgroup",
-	//}
-	//fmt.Println("----kang before FilterAdd------------------")
-	//if err := netlink.FilterAdd(filter); err != nil {
-	//	fmt.Println("failed to add filter. Reason:%s", err)
-	//}
-	//
-	//fmt.Println("*****CHENYANG in ingress*****")
-	//// ingress
-	//// tc filter add dev ens3f3 parent ffff: protocol ip u32 match u32 0 0 action mirred egress redirect dev ifb0
-	//// set egress for ifb
-	//mtu, err := getMTU(name)
-	//if err != nil {
-	//	fmt.Println("failed to get MTU. Reason:%s", err)
-	//}
-	//
-	//ifbDeviceName := "ifb0"
-	//err = CreateIfb(ifbDeviceName, mtu)
-	//if err != nil {
-	//	fmt.Println("failed to create ifb0. Reason:%s", err)
-	//}
-	//
-	//fmt.Println("create ifb success")
-	//err = CreateEgressQdisc(egress, egressBurst, name, ifbDeviceName)
-	//if err != nil {
-	//	fmt.Println("failed to create egress qdisc. Reason:%s", err)
-	//}
+		qdiscs, err := safeQdiscList(l)
+		if err != nil {
+			fmt.Printf("get current qdisc in the container namespace of %s\n", err)
+		}
+		var htb *netlink.Htb
+		var hasHtb = false
+		for _, qdisc := range qdiscs {
+			fmt.Printf("current qdisc is %s\n", qdisc)
 
+			h, isHTB := qdisc.(*netlink.Htb)
+			if isHTB {
+				htb = h
+				hasHtb = true
+				break
+			}
+		}
+
+		if !hasHtb {
+			// qdisc
+			// tc qdisc add dev lo root handle 1:0 htb default 1
+			attrs := netlink.QdiscAttrs{
+				LinkIndex: l.Attrs().Index,
+				Handle:    netlink.MakeHandle(1, 0),
+				Parent:    netlink.HANDLE_ROOT,
+			}
+			htb = netlink.NewHtb(attrs)
+			err = netlink.QdiscAdd(htb)
+			if err != nil {
+				fmt.Println("QdiscAdd error: %s\n", err)
+			}
+		}
+
+		// htb parent class
+		// tc class add dev lo parent 1:0 classid 1:1 htb rate 125Mbps ceil 125Mbps prio 0
+		// preconfig
+		classattrs1 := netlink.ClassAttrs{
+			LinkIndex: l.Attrs().Index,
+			Parent:    netlink.MakeHandle(1, 0),
+			Handle:    netlink.MakeHandle(1, 1),
+		}
+		htbclassattrs1 := netlink.HtbClassAttrs{
+			Rate:    egress,
+			Cbuffer: 0,
+		}
+		class1 := netlink.NewHtbClass(classattrs1, htbclassattrs1)
+		if err := netlink.ClassAdd(class1); err != nil {
+			fmt.Println("Class add error: ", err)
+		}
+
+		// htb child class
+		// tc class add dev lo parent 1:0 classid 1:5 htb rate 125kbps ceil 250kbps prio 0
+		//classattrs2 := netlink.ClassAttrs{
+		//	LinkIndex: l.Attrs().Index,
+		//	Parent:    netlink.MakeHandle(1, 0),
+		//	Handle:    netlink.MakeHandle(1, 5),
+		//	//Handle: *linuxNetworkIO.ClassID,
+		//}
+		//htbclassattrs2 := netlink.HtbClassAttrs{
+		//	Rate:    egress,
+		//	Cbuffer: uint32(egress) * 2,
+		//}
+		//class2 := netlink.NewHtbClass(classattrs2, htbclassattrs2)
+		//if err := netlink.ClassAdd(class2); err != nil {
+		//	fmt.Println("Class add error", err)
+		//}
+
+		// filter add
+		// tc filter add dev lo parent 1:0 prio 0 protocol all handle 5 fw flowid 1:5
+		filterattrs := netlink.FilterAttrs{
+			LinkIndex: l.Attrs().Index,
+			Parent:    netlink.MakeHandle(1, 0),
+			Handle:    netlink.MakeHandle(1, 1),
+			Priority:  49152,
+			Protocol:  unix.ETH_P_IP,
+		}
+
+		filter := &netlink.GenericFilter{
+			filterattrs,
+			"cgroup",
+		}
+
+		if err := netlink.FilterAdd(filter); err != nil {
+			fmt.Println("failed to add filter. Reason:%s", err)
+		}
+
+		// ingress
+		// tc filter add dev ens3f3 parent ffff: protocol ip u32 match u32 0 0 action mirred egress redirect dev ifb0
+		// set egress for ifb
+		mtu, err := getMTU(eth0)
+		if err != nil {
+			fmt.Println("failed to get MTU. Reason:%s", err)
+		}
+
+		ifbDeviceName := "ifb0"
+		err = CreateIfb(ifbDeviceName, mtu)
+		if err != nil {
+			fmt.Println("failed to create ifb0. Reason:%s", err)
+		}
+
+		fmt.Println("create ifb success")
+		err = CreateEgressQdisc(egress, egressBurst, eth0, ifbDeviceName)
+		if err != nil {
+			fmt.Println("failed to create egress qdisc. Reason:%s", err)
+		}
+
+		return nil
+	})
 	return nil
 }
 
@@ -660,6 +673,7 @@ func (c *criService) setupPodNetwork(ctx context.Context, sandbox *sandboxstore.
 	}
 	fmt.Printf("-------CHENYANG get bandWidth-------%s %d %d", net, bandWidth.EgressBurst, bandWidth.EgressRate)
 	netns, err := ns.GetNS(sandbox.NetNSPath)
+	defer netns.Close()
 	if err != nil {
 		fmt.Printf("failed to open netns %q: %v", netns, err)
 	}
