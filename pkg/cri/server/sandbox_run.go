@@ -37,7 +37,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	selinux "github.com/opencontainers/selinux/go-selinux"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/unix"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 
 	"github.com/containerd/containerd"
@@ -529,100 +528,101 @@ func createwithtc(ns ns.NetNS, egress, egressBurst uint64, name string) error {
 	if err != nil {
 		fmt.Printf("get link by name %s in the container namespace %s\n", name, err)
 	}
+	fmt.Printf("-------------kang ---------- %s\n", l.Attrs().Index)
 
-	qdiscs, err := safeQdiscList(l)
-	if err != nil {
-		fmt.Printf("get current qdisc in the container namespace of %s\n", err)
-	}
-	var htb *netlink.Htb
-	var hasHtb = false
-	for _, qdisc := range qdiscs {
-		fmt.Printf("current qdisc is %s\n", qdisc)
-
-		h, isHTB := qdisc.(*netlink.Htb)
-		if isHTB {
-			htb = h
-			hasHtb = true
-			break
-		}
-	}
-	fmt.Println("----kang before NewHtb------------------")
-	if !hasHtb {
-		// qdisc
-		// tc qdisc add dev lo root handle 1:0 htb default 1
-		attrs := netlink.QdiscAttrs{
-			LinkIndex: l.Attrs().Index,
-			Handle:    netlink.MakeHandle(1, 0),
-			Parent:    netlink.HANDLE_ROOT,
-		}
-		htb = netlink.NewHtb(attrs)
-		err = netlink.QdiscAdd(htb)
-		if err != nil {
-			fmt.Println("QdiscAdd error: %s\n", err)
-		}
-	}
-
-	fmt.Println("*****CHENYANG in hasHtb*****")
-	// htb parent class
-	// tc class add dev lo parent 1:0 classid 1:1 htb rate 125Mbps ceil 125Mbps prio 0
-	// preconfig
-	classattrs1 := netlink.ClassAttrs{
-		LinkIndex: l.Attrs().Index,
-		Parent:    netlink.MakeHandle(1, 0),
-		Handle:    netlink.MakeHandle(1, 1),
-	}
-	fmt.Println("----kang before HtbClassAttrs------------------")
-	htbclassattrs1 := netlink.HtbClassAttrs{
-		Rate:    egress,
-		Cbuffer: 0,
-	}
-	fmt.Println("----kang before NewHtbClass------------------")
-
-	class1 := netlink.NewHtbClass(classattrs1, htbclassattrs1)
-	fmt.Println("----kang before ClassAdd------------------")
-	if err := netlink.ClassAdd(class1); err != nil {
-		fmt.Println("Class add error: ", err)
-	}
-
-	// filter add
-	// tc filter add dev lo parent 1:0 prio 0 protocol all handle 5 fw flowid 1:5
-	filterattrs := netlink.FilterAttrs{
-		LinkIndex: l.Attrs().Index,
-		Parent:    netlink.MakeHandle(1, 0),
-		Handle:    netlink.MakeHandle(1, 1),
-		Priority:  49152,
-		Protocol:  unix.ETH_P_IP,
-	}
-
-	filter := &netlink.GenericFilter{
-		filterattrs,
-		"cgroup",
-	}
-	fmt.Println("----kang before FilterAdd------------------")
-	if err := netlink.FilterAdd(filter); err != nil {
-		fmt.Println("failed to add filter. Reason:%s", err)
-	}
-
-	fmt.Println("*****CHENYANG in ingress*****")
-	// ingress
-	// tc filter add dev ens3f3 parent ffff: protocol ip u32 match u32 0 0 action mirred egress redirect dev ifb0
-	// set egress for ifb
-	mtu, err := getMTU(name)
-	if err != nil {
-		fmt.Println("failed to get MTU. Reason:%s", err)
-	}
-
-	ifbDeviceName := "ifb0"
-	err = CreateIfb(ifbDeviceName, mtu)
-	if err != nil {
-		fmt.Println("failed to create ifb0. Reason:%s", err)
-	}
-
-	fmt.Println("create ifb success")
-	err = CreateEgressQdisc(egress, egressBurst, name, ifbDeviceName)
-	if err != nil {
-		fmt.Println("failed to create egress qdisc. Reason:%s", err)
-	}
+	//qdiscs, err := safeQdiscList(l)
+	//if err != nil {
+	//	fmt.Printf("get current qdisc in the container namespace of %s\n", err)
+	//}
+	//var htb *netlink.Htb
+	//var hasHtb = false
+	//for _, qdisc := range qdiscs {
+	//	fmt.Printf("current qdisc is %s\n", qdisc)
+	//
+	//	h, isHTB := qdisc.(*netlink.Htb)
+	//	if isHTB {
+	//		htb = h
+	//		hasHtb = true
+	//		break
+	//	}
+	//}
+	//fmt.Println("----kang before NewHtb------------------")
+	//if !hasHtb {
+	//	// qdisc
+	//	// tc qdisc add dev lo root handle 1:0 htb default 1
+	//	attrs := netlink.QdiscAttrs{
+	//		LinkIndex: l.Attrs().Index,
+	//		Handle:    netlink.MakeHandle(1, 0),
+	//		Parent:    netlink.HANDLE_ROOT,
+	//	}
+	//	htb = netlink.NewHtb(attrs)
+	//	err = netlink.QdiscAdd(htb)
+	//	if err != nil {
+	//		fmt.Println("QdiscAdd error: %s\n", err)
+	//	}
+	//}
+	//
+	//fmt.Println("*****CHENYANG in hasHtb*****")
+	//// htb parent class
+	//// tc class add dev lo parent 1:0 classid 1:1 htb rate 125Mbps ceil 125Mbps prio 0
+	//// preconfig
+	//classattrs1 := netlink.ClassAttrs{
+	//	LinkIndex: l.Attrs().Index,
+	//	Parent:    netlink.MakeHandle(1, 0),
+	//	Handle:    netlink.MakeHandle(1, 1),
+	//}
+	//fmt.Println("----kang before HtbClassAttrs------------------")
+	//htbclassattrs1 := netlink.HtbClassAttrs{
+	//	Rate:    egress,
+	//	Cbuffer: 0,
+	//}
+	//fmt.Println("----kang before NewHtbClass------------------")
+	//
+	//class1 := netlink.NewHtbClass(classattrs1, htbclassattrs1)
+	//fmt.Println("----kang before ClassAdd------------------")
+	//if err := netlink.ClassAdd(class1); err != nil {
+	//	fmt.Println("Class add error: ", err)
+	//}
+	//
+	//// filter add
+	//// tc filter add dev lo parent 1:0 prio 0 protocol all handle 5 fw flowid 1:5
+	//filterattrs := netlink.FilterAttrs{
+	//	LinkIndex: l.Attrs().Index,
+	//	Parent:    netlink.MakeHandle(1, 0),
+	//	Handle:    netlink.MakeHandle(1, 1),
+	//	Priority:  49152,
+	//	Protocol:  unix.ETH_P_IP,
+	//}
+	//
+	//filter := &netlink.GenericFilter{
+	//	filterattrs,
+	//	"cgroup",
+	//}
+	//fmt.Println("----kang before FilterAdd------------------")
+	//if err := netlink.FilterAdd(filter); err != nil {
+	//	fmt.Println("failed to add filter. Reason:%s", err)
+	//}
+	//
+	//fmt.Println("*****CHENYANG in ingress*****")
+	//// ingress
+	//// tc filter add dev ens3f3 parent ffff: protocol ip u32 match u32 0 0 action mirred egress redirect dev ifb0
+	//// set egress for ifb
+	//mtu, err := getMTU(name)
+	//if err != nil {
+	//	fmt.Println("failed to get MTU. Reason:%s", err)
+	//}
+	//
+	//ifbDeviceName := "ifb0"
+	//err = CreateIfb(ifbDeviceName, mtu)
+	//if err != nil {
+	//	fmt.Println("failed to create ifb0. Reason:%s", err)
+	//}
+	//
+	//fmt.Println("create ifb success")
+	//err = CreateEgressQdisc(egress, egressBurst, name, ifbDeviceName)
+	//if err != nil {
+	//	fmt.Println("failed to create egress qdisc. Reason:%s", err)
+	//}
 
 	return nil
 }
